@@ -1,64 +1,96 @@
-import requests
-import json
+import time
 from datetime import datetime
+
+import requests
 
 # Replace with your LeetCode username
 LEETCODE_USERNAME = "guptashivam0507"
 
-# LeetCode GraphQL API to fetch solved problems
+# LeetCode GraphQL API URL
 LEETCODE_API_URL = "https://leetcode.com/graphql"
 
+# GraphQL Query for recent accepted submissions
 QUERY = """
-{
-  matchedUser(username: "%s") {
-    username
-    submitStatsGlobal {
-      acSubmissionNum {
-        difficulty
-        count
-      }
+query recentAcSubmissions($username: String!, $limit: Int!) {
+    recentAcSubmissionList(username: $username, limit: $limit) {
+        id    
+        title    
+        titleSlug    
+        timestamp  
     }
-    recentAcSubmissionList {
-      title
-      titleSlug
-      timestamp
-      difficulty
-    }
-  }
 }
-""" % LEETCODE_USERNAME
-
-HEADERS = {"Content-Type": "application/json"}
-
-# Fetch data from LeetCode
-response = requests.post(LEETCODE_API_URL, json={"query": QUERY}, headers=HEADERS)
-data = response.json()
-
-if "errors" in data:
-    print("Error fetching data. Check username or API availability.")
-    exit()
-
-# Extracting problem-solving stats
-submission_stats = data["data"]["matchedUser"]["submitStatsGlobal"]["acSubmissionNum"]
-total_solved = sum(item["count"] for item in submission_stats)  # Total problems solved
-
-# Extracting recent submissions
-recent_problems = data["data"]["matchedUser"]["recentAcSubmissionList"]
-
-# Formatting problem log dynamically
-problem_log = """
-| Date       | Problem | Difficulty | Solution |
-|------------|---------|------------|----------|
 """
 
-for problem in recent_problems:
-    date_solved = datetime.utcfromtimestamp(int(problem["timestamp"])).strftime("%Y-%m-%d")
-    problem_name = problem["title"]
-    problem_slug = problem["titleSlug"]
-    difficulty = problem["difficulty"]
-    solution_link = f"./solutions/{problem_slug}.py"  # Assuming solutions are stored in /solutions
+HEADERS = {
+    "Content-Type": "application/json",
+    "Referer": f"https://leetcode.com/{LEETCODE_USERNAME}/",
+}
 
-    problem_log += f"| {date_solved} | [{problem_name}](https://leetcode.com/problems/{problem_slug}/) | {difficulty} | [Solution]({solution_link}) |\n"
+
+def fetch_leetcode_data():
+    """Fetch user's recent accepted submissions from LeetCode API with error handling."""
+    session = requests.Session()
+    payload = {
+        "query": QUERY,
+        "variables": {
+            "username": LEETCODE_USERNAME,
+            "limit": 10  # Fetch last 10 solved problems
+        }
+    }
+
+    for attempt in range(3):  # Retry mechanism
+        try:
+            response = session.post(LEETCODE_API_URL, json=payload, headers=HEADERS, timeout=10)
+            response.raise_for_status()
+            data = response.json()
+
+            if "errors" in data or not data.get("data"):
+                print(f"⚠️ Error in API response (Attempt {attempt + 1}/3). Retrying...")
+                time.sleep(2)  # Wait before retrying
+                continue
+
+            return data["data"]
+
+        except requests.exceptions.RequestException as e:
+            print(f"⚠️ Network error: {e} (Attempt {attempt + 1}/3). Retrying...")
+            time.sleep(2)
+
+    print("❌ Failed to fetch data after 3 attempts.")
+    return None
+
+
+# Fetch data
+data = fetch_leetcode_data()
+if not data:
+    exit("❌ Could not fetch data. Check API availability or username.")
+
+# Extract recent accepted submissions
+recent_problems = data["recentAcSubmissionList"]
+
+# Get today's date in UTC
+today_date = datetime.utcnow().strftime("%Y-%m-%d")
+
+# Filtering problems solved today
+daily_problems = [
+    {
+        "date": datetime.utcfromtimestamp(int(p["timestamp"])).strftime("%Y-%m-%d"),
+        "title": p["title"],
+        "slug": p["titleSlug"],
+        "solution_link": f"./solutions/{p['titleSlug']}.py"
+    }
+    for p in recent_problems if datetime.utcfromtimestamp(int(p["timestamp"])).strftime("%Y-%m-%d") == today_date
+]
+
+daily_solved_count = len(daily_problems)  # Number of problems solved today
+
+# Formatting daily problem log
+daily_problem_log = """
+| Date       | Problem | Solution |
+|------------|---------|----------|
+"""
+
+for problem in daily_problems:
+    daily_problem_log += f"| {problem['date']} | [{problem['title']}](https://leetcode.com/problems/{problem['slug']}/) | [Solution]({problem['solution_link']}) |\n"
 
 # Generate progress.md content
 progress_md = f"""# LeetCode Progress Tracker 📈
@@ -66,20 +98,19 @@ progress_md = f"""# LeetCode Progress Tracker 📈
 This file dynamically tracks my solved problems.
 
 ## 📅 Daily Log
-{problem_log}
+{daily_problem_log}
 
 ---
 
 ## 📊 Summary
-- ✅ **Total Problems Solved:** {total_solved}
-- 🔥 **Current Streak:** XX Days (Manually Update or Automate)
-- 📌 **Topics Covered:** Arrays, Strings, Linked Lists, Dynamic Programming, etc.
+- ✅ **Problems Solved Today:** {daily_solved_count}
+- 📌 **Total Recent Submissions Tracked:** {len(recent_problems)}
+- 🏆 Keep grinding! 🚀
 
-Keep grinding! 🚀
 """
 
 # Save to progress.md
 with open("progress.md", "w") as f:
     f.write(progress_md)
 
-print("✅ Progress updated successfully!")
+print(f"✅ Progress updated! {daily_solved_count} problems solved today.")
