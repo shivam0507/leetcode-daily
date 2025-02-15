@@ -3,7 +3,7 @@ import json
 from datetime import datetime
 
 # Replace with your LeetCode username
-LEETCODE_USERNAME = "guptashivam0507"
+LEETCODE_USERNAME = "your_username"
 
 # LeetCode GraphQL API to fetch solved problems
 LEETCODE_API_URL = "https://leetcode.com/graphql"
@@ -18,9 +18,11 @@ QUERY = """
         count
       }
     }
-    problemsSolvedBeatsStats {
+    recentAcSubmissionList {
+      title
+      titleSlug
+      timestamp
       difficulty
-      percentage
     }
   }
 }
@@ -36,17 +38,27 @@ if "errors" in data:
     print("Error fetching data. Check username or API availability.")
     exit()
 
-# Extracting relevant data
+# Extracting problem-solving stats
 submission_stats = data["data"]["matchedUser"]["submitStatsGlobal"]["acSubmissionNum"]
 total_solved = sum(item["count"] for item in submission_stats)  # Total problems solved
-streak = "XX"  # LeetCode API does not directly provide streak data
 
-# Placeholder for detailed problem log (you can extend this to fetch problem details)
+# Extracting recent submissions
+recent_problems = data["data"]["matchedUser"]["recentAcSubmissionList"]
+
+# Formatting problem log dynamically
 problem_log = """
 | Date       | Problem | Difficulty | Solution |
 |------------|---------|------------|----------|
-| YYYY-MM-DD | [Example Problem](https://leetcode.com/problems/) | Easy | [Solution](./solutions/example.py) |
 """
+
+for problem in recent_problems:
+    date_solved = datetime.utcfromtimestamp(int(problem["timestamp"])).strftime("%Y-%m-%d")
+    problem_name = problem["title"]
+    problem_slug = problem["titleSlug"]
+    difficulty = problem["difficulty"]
+    solution_link = f"./solutions/{problem_slug}.py"  # Assuming solutions are stored in /solutions
+
+    problem_log += f"| {date_solved} | [{problem_name}](https://leetcode.com/problems/{problem_slug}/) | {difficulty} | [Solution]({solution_link}) |\n"
 
 # Generate progress.md content
 progress_md = f"""# LeetCode Progress Tracker 📈
@@ -60,7 +72,7 @@ This file dynamically tracks my solved problems.
 
 ## 📊 Summary
 - ✅ **Total Problems Solved:** {total_solved}
-- 🔥 **Current Streak:** {streak} Days
+- 🔥 **Current Streak:** XX Days (Manually Update or Automate)
 - 📌 **Topics Covered:** Arrays, Strings, Linked Lists, Dynamic Programming, etc.
 
 Keep grinding! 🚀
