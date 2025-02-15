@@ -3,7 +3,7 @@ name: Update LeetCode Progress
 on:
   schedule:
     - cron: '0 0 * * *'  # Runs daily at midnight UTC
-  workflow_dispatch:  # Allows manual run
+  workflow_dispatch:  # Allows manual trigger
 
 jobs:
   update-progress:
@@ -12,6 +12,8 @@ jobs:
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v3
+      with:
+        token: ${{ secrets.GH_PAT }}  # Use Personal Access Token
 
     - name: Set Up Python
       uses: actions/setup-python@v4
@@ -30,5 +32,5 @@ jobs:
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
         git add progress.md
         git commit -m "Auto-update LeetCode progress"
-        git push
+        git push https://x-access-token:${{ secrets.GH_PAT }}@github.com/shivam0507/leetcode-daily.git HEAD:main
       continue-on-error: true
