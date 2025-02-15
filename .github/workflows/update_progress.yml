@@ -13,7 +13,7 @@ jobs:
     - name: Checkout Repository
       uses: actions/checkout@v3
       with:
-        token: ${{ secrets.GH_PAT }}  # Use Personal Access Token
+        token: ${{ secrets.GH_PAT }}  # Use PAT to push changes
 
     - name: Set Up Python
       uses: actions/setup-python@v4
@@ -26,11 +26,12 @@ jobs:
     - name: Fetch LeetCode Data & Update Progress
       run: python update_progress.py
 
-    - name: Commit and Push Changes
+    - name: Commit and Push Changes to Master
       run: |
         git config --global user.name "github-actions[bot]"
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
+        git checkout master  # Ensure we're on master branch
         git add progress.md
-        git commit -m "Auto-update LeetCode progress"
-        git push https://x-access-token:${{ secrets.GH_PAT }}@github.com/shivam0507/leetcode-daily.git HEAD:main
+        git commit -m "Auto-update LeetCode progress 🚀"
+        git push https://x-access-token:${{ secrets.GH_PAT }}@github.com/shivam0507/leetcode-daily.git master
       continue-on-error: true
