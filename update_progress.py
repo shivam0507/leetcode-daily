@@ -3,7 +3,7 @@ import json
 from datetime import datetime
 
 # Replace with your LeetCode username
-LEETCODE_USERNAME = "your_username"
+LEETCODE_USERNAME = "guptashivam0507"
 
 # LeetCode GraphQL API to fetch solved problems
 LEETCODE_API_URL = "https://leetcode.com/graphql"
